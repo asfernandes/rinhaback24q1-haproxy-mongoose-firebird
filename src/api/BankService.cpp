@@ -4,7 +4,6 @@
 #include "./Util.h"
 #include <string>
 #include <string_view>
-#include <experimental/scope>
 
 using std::string;
 using std::string_view;
@@ -12,14 +11,10 @@ using std::string_view;
 
 namespace rinhaback::api
 {
-	static ConnectionPool connectionPool;
-
 	int BankService::postTransaction(
 		PostTransactionResponse* response, int accountId, int value, string_view description)
 	{
-		auto connectionHolder = connectionPool.getConnection();
-
-		auto& postTransactionInMsg = connectionHolder->postTransactionInMsg;
+		auto& postTransactionInMsg = databaseConnection.postTransactionInMsg;
 		auto postTransactionInData = postTransactionInMsg.getData();
 		postTransactionInData->accountIdNull = FB_FALSE;
 		postTransactionInData->accountId = accountId;
@@ -28,11 +23,11 @@ namespace rinhaback::api
 		postTransactionInData->descriptionNull = FB_FALSE;
 		postTransactionInData->description.set(&description.front(), description.length());
 
-		auto& postTransactionOutMsg = connectionHolder->postTransactionOutMsg;
+		auto& postTransactionOutMsg = databaseConnection.postTransactionOutMsg;
 		auto postTransactionOutData = postTransactionOutMsg.getData();
 
-		connectionHolder->postTransactionStmt->execute(&connectionHolder->statusWrapper,
-			connectionHolder->transaction.get(), postTransactionInMsg.getMetadata(), postTransactionInData,
+		databaseConnection.postTransactionStmt->execute(&databaseConnection.statusWrapper,
+			databaseConnection.transaction.get(), postTransactionInMsg.getMetadata(), postTransactionInData,
 			postTransactionOutMsg.getMetadata(), postTransactionOutData);
 
 		if (postTransactionOutData->statusCode != HTTP_STATUS_OK)
@@ -46,24 +41,22 @@ namespace rinhaback::api
 
 	int BankService::getStatement(GetStatementResponse* response, int accountId)
 	{
-		auto connectionHolder = connectionPool.getConnection();
-
-		auto& getTransactionsInMsg = connectionHolder->getTransactionsInMsg;
+		auto& getTransactionsInMsg = databaseConnection.getTransactionsInMsg;
 		auto getTransactionsInData = getTransactionsInMsg.getData();
 		getTransactionsInData->accountIdNull = FB_FALSE;
 		getTransactionsInData->accountId = accountId;
 
-		auto& getTransactionsOutMsg = connectionHolder->getTransactionsOutMsg;
+		auto& getTransactionsOutMsg = databaseConnection.getTransactionsOutMsg;
 		auto getTransactionsOutData = getTransactionsOutMsg.getData();
 
-		FbRef<fb::IResultSet> cursor(connectionHolder->getTransactionsStmt->openCursor(&connectionHolder->statusWrapper,
-			connectionHolder->transaction.get(), getTransactionsInMsg.getMetadata(), getTransactionsInData,
-			getTransactionsOutMsg.getMetadata(), 0));
+		FbRef<fb::IResultSet> cursor(databaseConnection.getTransactionsStmt->openCursor(
+			&databaseConnection.statusWrapper, databaseConnection.transaction.get(), getTransactionsInMsg.getMetadata(),
+			getTransactionsInData, getTransactionsOutMsg.getMetadata(), 0));
 
-		if (cursor->fetchNext(&connectionHolder->statusWrapper, getTransactionsOutData) != fb::IStatus::RESULT_OK)
+		if (cursor->fetchNext(&databaseConnection.statusWrapper, getTransactionsOutData) != fb::IStatus::RESULT_OK)
 		{
 			cursor->addRef();
-			cursor->close(&connectionHolder->statusWrapper);
+			cursor->close(&databaseConnection.statusWrapper);
 
 			return HTTP_STATUS_NOT_FOUND;
 		}
@@ -81,9 +74,9 @@ namespace rinhaback::api
 				response->lastTransactions.emplace_back(getTransactionsOutData->val,
 					string(getTransactionsOutData->description.str, getTransactionsOutData->description.length),
 					FirebirdClient::getInstance().formatTimestampTz(
-						&connectionHolder->statusWrapper, getTransactionsOutData->datetime));
+						&databaseConnection.statusWrapper, getTransactionsOutData->datetime));
 
-				if (cursor->fetchNext(&connectionHolder->statusWrapper, getTransactionsOutData) !=
+				if (cursor->fetchNext(&databaseConnection.statusWrapper, getTransactionsOutData) !=
 					fb::IStatus::RESULT_OK)
 				{
 					break;
@@ -92,7 +85,7 @@ namespace rinhaback::api
 		}
 
 		cursor->addRef();
-		cursor->close(&connectionHolder->statusWrapper);
+		cursor->close(&databaseConnection.statusWrapper);
 
 		return HTTP_STATUS_OK;
 	}

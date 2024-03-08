@@ -1,18 +1,13 @@
 #pragma once
 
 #include "./FbUtil.h"
-#include <condition_variable>
-#include <functional>
-#include <memory>
-#include <mutex>
-#include <stack>
 #include "firebird/Interface.h"
 #include "firebird/Message.h"
 
 
 namespace rinhaback::api
 {
-	class Connection final
+	class DatabaseConnection final
 	{
 	public:
 		// clang-format off
@@ -44,11 +39,14 @@ namespace rinhaback::api
 		// clang-format on
 
 	public:
-		explicit Connection();
-		~Connection();
+		explicit DatabaseConnection();
+		~DatabaseConnection();
 
-		Connection(const Connection&) = delete;
-		Connection& operator=(const Connection&) = delete;
+		DatabaseConnection(const DatabaseConnection&) = delete;
+		DatabaseConnection& operator=(const DatabaseConnection&) = delete;
+
+	public:
+		void ping() { }
 
 	private:
 		void startTransaction();
@@ -66,24 +64,5 @@ namespace rinhaback::api
 		GetTransactionsOutMsg getTransactionsOutMsg;
 	};
 
-	using ConnectionHolder = std::unique_ptr<Connection, std::function<void(Connection*)>>;
-
-	class ConnectionPool final
-	{
-	public:
-		explicit ConnectionPool();
-
-		ConnectionPool(const ConnectionPool&) = delete;
-		ConnectionPool& operator=(const ConnectionPool&) = delete;
-
-		ConnectionHolder getConnection();
-
-	private:
-		void releaseConnection(Connection* connection);
-
-	private:
-		std::mutex connectionsMutex;
-		std::condition_variable connectionsCondVar;
-		std::stack<std::unique_ptr<Connection>> connections;
-	};
+	inline thread_local DatabaseConnection databaseConnection;
 }  // namespace rinhaback::api
