@@ -9,11 +9,6 @@ create table transaction (
     constraint transaction_pk primary key (account_id, seq) using desc index transaction_pk_desc
 );
 
-create desc index idx_transaction_account_id_seq_desc on transaction (
-    account_id,
-    seq
-);
-
 
 create or alter view transaction_check
 as
@@ -83,10 +78,7 @@ begin
 
         exit;
     when gdscode unique_key_violation do
-        begin
-            account_exists = true;
-            continue;
-        end
+        account_exists = true;
     end
 end!
 
