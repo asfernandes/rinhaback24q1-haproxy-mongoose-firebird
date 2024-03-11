@@ -47,7 +47,7 @@ begin
                         overdraft,
                         :val,
                         :description,
-                        'now'  -- current_timestamp
+                        'now'
                     from (
                         select seq,
                                balance + :val new_balance,
