@@ -1,11 +1,11 @@
 create table transaction (
     account_id integer not null,
     seq integer not null,
-    balance integer not null,
-    overdraft integer not null,
-    val integer not null,
-    description varchar(10) not null,
-    datetime timestamp with time zone not null,
+    balance integer /*not null*/,
+    overdraft integer /*not null*/,
+    val integer /*not null*/,
+    description varchar(10) /*not null*/,
+    datetime timestamp with time zone /*not null*/,
     constraint transaction_pk primary key (account_id, seq) using desc index transaction_pk_desc
 );
 
