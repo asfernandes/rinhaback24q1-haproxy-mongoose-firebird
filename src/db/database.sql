@@ -38,6 +38,12 @@ as
 begin
     while (true) do
     begin
+        /*
+        If this does not raise exception, it means one of these:
+        - the transaction succeded (status_code = 200)
+        - bankrupt (only when val < 0)
+        - account does not exists
+        */
         in autonomous transaction do
             insert into transaction (account_id, seq, balance, overdraft, val, description, datetime)
                 select :account_id,
@@ -46,7 +52,7 @@ begin
                         overdraft,
                         :val,
                         :description,
-                        'now'
+                        'now'   -- with current_timestamp it will be fixed during the whole execution
                     from (
                         select seq,
                                balance + :val new_balance,
@@ -65,18 +71,23 @@ begin
                 case
                     when val < 0 then
                         coalesce(
-                            (select 422
+                            (select 422  -- account exists, so it is bankrupt
                                  from transaction
                                  where account_id = :account_id and
                                        seq = 0
                             ),
-                            404
+                            404  -- account does not exists
                         )
-                    else 404
+                    else 404  -- account does not exists
                 end;
 
         exit;
     when gdscode unique_key_violation do
+        /*
+        Here we know the account exist.
+        If the insert do not raise exception in the next round, it will overwrite status_code with 200
+        or it will leave the status code as 422 meaning the account is bankrupt.
+        */
         status_code = 422;
     end
 end!
