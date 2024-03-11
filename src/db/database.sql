@@ -35,6 +35,7 @@ create or alter procedure post_transaction(
     overdraft integer
 )
 as
+    declare account_exists boolean = false;
 begin
     while (true) do
     begin
@@ -63,6 +64,7 @@ begin
         if (balance is null) then
             status_code =
                 case
+                    when account_exists then 422
                     when val < 0 then
                         coalesce(
                             (select 422
@@ -77,7 +79,7 @@ begin
 
         exit;
     when gdscode unique_key_violation do
-        begin end
+        account_exists = true;
     end
 end!
 
