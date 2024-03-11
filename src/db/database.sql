@@ -47,12 +47,12 @@ begin
         in autonomous transaction do
             insert into transaction (account_id, seq, balance, overdraft, val, description, datetime)
                 select :account_id,
-                        seq + 1,
-                        new_balance,
-                        overdraft,
-                        :val,
-                        :description,
-                        'now'   -- with current_timestamp it will be fixed during the whole execution
+                       seq + 1,
+                       new_balance,
+                       overdraft,
+                       :val,
+                       :description,
+                       'now'   -- with current_timestamp it will be fixed during the whole execution
                     from (
                         select seq,
                                balance + :val new_balance,
