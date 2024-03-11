@@ -30,7 +30,7 @@ namespace rinhaback::api
 			databaseConnection.transaction.get(), postTransactionInMsg.getMetadata(), postTransactionInData,
 			postTransactionOutMsg.getMetadata(), postTransactionOutData);
 
-		if (!postTransactionOutData->statusCodeNull && postTransactionOutData->statusCode != HTTP_STATUS_OK)
+		if (postTransactionOutData->statusCode != HTTP_STATUS_OK)
 			return postTransactionOutData->statusCode;
 
 		response->balance = postTransactionOutData->balance;
