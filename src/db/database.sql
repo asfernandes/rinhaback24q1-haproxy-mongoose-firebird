@@ -61,20 +61,19 @@ begin
                 returning balance, overdraft
                 into balance, overdraft;
 
-        if (balance is not null) then
-            status_code = 200;
-        else if (account_exists) then
-            status_code = 422;
-        else
-        begin
-            status_code = 404;
-
-            select 422
-                from transaction
-                where account_id = :account_id and
-                      seq = 0
-                into status_code;
-        end
+        if (balance is null) then
+            status_code =
+                case
+                    when val > 0 then 404
+                    else coalesce(
+                             (select 422
+                                  from transaction
+                                  where account_id = :account_id and
+                                        seq = 0
+                             ),
+                             404
+                         )
+                end;
 
         exit;
     when gdscode unique_key_violation do
